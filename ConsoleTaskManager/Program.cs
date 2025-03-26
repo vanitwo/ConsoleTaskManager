@@ -3,6 +3,7 @@
 public class Program
 {
     private static bool _isRunning = true;
+    private static TaskManager _taskManager = new TaskManager();
 
     public static void Main()
     {
@@ -23,8 +24,8 @@ public class Program
 
         switch (userInput)
         {
-            case "1": ExecuteAction("Добавляю задачу"); break;
-            case "2": ExecuteAction("Сейчас покажу все задачи"); break;
+            case "1": _taskManager.AddTask(); break;
+            case "2": _taskManager.ShowTasks(); break;
             case "3": ExecuteAction("Отмечаю задачу выполненной"); break;
             case "4": ExecuteAction("Удаляю задачу"); break;
             case "5": ExitApp(); break;
@@ -113,7 +114,8 @@ public class PrintMessage
 
 public class TaskItem
 {
-    public int Id { get; } = 0;
+    private int _idCounter = 1;
+    public int Id { get; } 
     public string Title { get; set; }
     public string Description { get; set; }
     public DateTime DueDate { get; set; }
@@ -125,7 +127,7 @@ public class TaskItem
         Description = description;
         DueDate = dueDate;
         IsCompleted = false;
-        Id++;
+        Id = _idCounter++;
     }
 }
 
@@ -134,41 +136,79 @@ public class TaskManager
     public List<TaskItem> TaskItems { get; set; } = new List<TaskItem>();
 
     public void AddTask()
-    {
-        PrintMessage.PrintCenteredText("Введите название задачи: ");
-        var title = Console.ReadLine()?.Trim();
-        if (!string.IsNullOrEmpty(title))
-        {
-            PrintMessage.PrintCenteredText("Задача добавлена!");
-        }
-        else
-        {
-            PrintMessage.ShowError("Описание задачи не может быть пустым!");
-        }
-
-        PrintMessage.PrintCenteredText("Введите цель задачи: ");
-        var description = Console.ReadLine()?.Trim();
-        if (!string.IsNullOrEmpty(description))
-        {
-            PrintMessage.PrintCenteredText("Цель утановлена!");
-        }
-        else
-        {
-            PrintMessage.ShowError("Цель задачи не может быть пустой!");
-        }
-
-        PrintMessage.PrintCenteredText("Сколько времени вы хотите потратить на задачу в днях: ");
-        var dueTime = DateTime.Now;
-        if (int.TryParse(Console.ReadLine()?.Trim(), out int days))
-        {
-            dueTime.AddDays(days);
-            PrintMessage.PrintCenteredText($"Дата {days} дней назад: {dueTime}");
-        }
-        else
-        {
-            PrintMessage.ShowError("Некорректный ввод");
-        }
+    {       
+        string title = GetInput("Введите название задачи: ", "Описание задачи не может быть пустым!");
+        if (title == null) return;
+        Console.Clear();
         
-        TaskItems.Add(new TaskItem(title, description, dueTime));
+        string description = GetInput("Введите цель задачи: ", "Цель задачи не может быть пустой!");
+        if (description == null) return;
+        Console.Clear();
+        
+        DateTime? dueDate = GetDueDate();
+        if (!dueDate.HasValue) return;
+        Console.Clear();
+        
+        TaskItems.Add(new TaskItem(title, description, dueDate.Value));
+        PrintMessage.PrintCenteredText("Задача добавлена!");
+    }
+
+    public void ShowTasks()
+    {
+        if (!TaskItems.Any())
+        {
+            PrintMessage.PrintCenteredText("Список задач пуст!");
+            return;
+        }
+
+        var output = new List<string> { "СПИСОК ЗАДАЧ", " "};
+        
+
+        foreach (var task in TaskItems)
+        {
+            var taskLines = new[]
+            {
+                $"ID: {task.Id}",
+                $"Название: {task.Title}",
+                $"Описание: {task.Description}",
+                $"Срок: {task.DueDate:dd.MM.yyyy HH:mm}"
+            };
+
+            output.AddRange(taskLines);
+            output.Add(new string('-', taskLines.Max(line => line.Length)));
+        }
+        //output = output
+        //    //.Skip(1)
+        //    .Select(line => line.PadRight(35)).ToList();
+
+        PrintMessage.PrintCenteredText(output.ToArray());
+        Console.ReadKey();
+    }
+
+    private string GetInput(string prompt, string errorMessage)
+    {
+        PrintMessage.PrintCenteredText(prompt);
+        string input = Console.ReadLine()?.Trim();
+
+        if (string.IsNullOrEmpty(input))
+        {
+            PrintMessage.ShowError(errorMessage);
+            return null;
+        }
+        return input;
+    }
+
+    private DateTime? GetDueDate()
+    {
+        PrintMessage.PrintCenteredText("Сколько дней на выполнение задачи: ");
+        string input = Console.ReadLine()?.Trim();
+
+        if (!int.TryParse(input, out int days) || days <= 0)
+        {
+            PrintMessage.ShowError("Некорректный ввод! Введите положительное число.");
+            return null;
+        }
+
+        return DateTime.Now.AddDays(days);
     }
 }
