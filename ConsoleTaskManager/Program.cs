@@ -26,8 +26,8 @@ public class Program
         {
             case "1": _taskManager.AddTask(); break;
             case "2": _taskManager.ShowTasks(); break;
-            case "3": ExecuteAction("Отмечаю задачу выполненной"); break;
-            case "4": ExecuteAction("Удаляю задачу"); break;
+            case "3": _taskManager.MarkTaskDone(); break;
+            case "4": _taskManager.DeleteTask(); break;
             case "5": ExitApp(); break;
             default: PrintMessage.ShowError("Неверный номер операции! Попробуй еще раз."); break;
         }
@@ -66,15 +66,7 @@ public class Program
         PrintMessage.PrintCenteredText(greetings);
         Console.ReadKey();
         Console.Clear();
-    }
-
-
-    private static void ExecuteAction(string message)
-    {
-        PrintMessage.PrintCenteredText(new[] { message, " ", "Нажмите любую клавишу для продолжения..." });
-        Console.ReadKey();
-        Console.Clear();
-    }
+    }    
 
     private static void ExitApp()
     {
@@ -101,6 +93,39 @@ public class PrintMessage
         }
     }
 
+    public static void PrintColoredCenteredLine(string text, ConsoleColor color, int verticalOffset = 0)
+    {
+        // Сохраняем исходные настройки
+        var originalColor = Console.ForegroundColor;
+        int originalX = Console.CursorLeft;
+        int originalY = Console.CursorTop;
+
+        // Рассчитываем позицию
+        int x = (Console.WindowWidth - text.Length) / 2;
+        int y = (Console.WindowHeight / 2) + verticalOffset; // Центр экрана + смещение
+
+        // Устанавливаем позицию и цвет
+        Console.SetCursorPosition(x, y);
+        Console.ForegroundColor = color;
+        Console.Write(text);
+
+        // Восстанавливаем настройки
+        Console.ForegroundColor = originalColor;
+        Console.SetCursorPosition(originalX, originalY); // Возвращаем курсор на исходную позицию
+    }
+
+    public static void PrintColoredCenteredBlock(List<Tuple<string, ConsoleColor>> lines)
+    {
+        int startY = -(lines.Count / 2); // Центрируем блок целиком
+
+        foreach (var line in lines)
+        {
+            PrintColoredCenteredLine(line.Item1, line.Item2, startY);
+            startY++;
+        }
+    }
+
+
     public static void ShowError(string error)
     {
 
@@ -114,8 +139,8 @@ public class PrintMessage
 
 public class TaskItem
 {
-    private int _idCounter = 1;
-    public int Id { get; } 
+    private static int _idCounter = 1;
+    public int Id { get; }
     public string Title { get; set; }
     public string Description { get; set; }
     public DateTime DueDate { get; set; }
@@ -127,7 +152,15 @@ public class TaskItem
         Description = description;
         DueDate = dueDate;
         IsCompleted = false;
-        Id = _idCounter++;
+        Id = _idCounter;
+        _idCounter++;
+    }
+
+    public ConsoleColor GetTaskColor()
+    {
+        if (IsCompleted) return ConsoleColor.Green;
+        if (DueDate < DateTime.Now) return ConsoleColor.Red;
+        return ConsoleColor.Blue;
     }
 }
 
@@ -136,19 +169,19 @@ public class TaskManager
     public List<TaskItem> TaskItems { get; set; } = new List<TaskItem>();
 
     public void AddTask()
-    {       
+    {
         string title = GetInput("Введите название задачи: ", "Описание задачи не может быть пустым!");
         if (title == null) return;
         Console.Clear();
-        
+
         string description = GetInput("Введите цель задачи: ", "Цель задачи не может быть пустой!");
         if (description == null) return;
         Console.Clear();
-        
+
         DateTime? dueDate = GetDueDate();
         if (!dueDate.HasValue) return;
         Console.Clear();
-        
+
         TaskItems.Add(new TaskItem(title, description, dueDate.Value));
         PrintMessage.PrintCenteredText("Задача добавлена!");
     }
@@ -157,32 +190,75 @@ public class TaskManager
     {
         if (!TaskItems.Any())
         {
-            PrintMessage.PrintCenteredText("Список задач пуст!");
+            PrintMessage.ShowError("Список задач пуст!");
             return;
         }
 
-        var output = new List<string> { "СПИСОК ЗАДАЧ", " "};
-        
+        // Собираем все строки с их цветами
+        var linesWithColors = new List<Tuple<string, ConsoleColor>>();
+        linesWithColors.Add(Tuple.Create("=== СПИСОК ЗАДАЧ ===", ConsoleColor.White));
 
         foreach (var task in TaskItems)
         {
-            var taskLines = new[]
-            {
-                $"ID: {task.Id}",
-                $"Название: {task.Title}",
-                $"Описание: {task.Description}",
-                $"Срок: {task.DueDate:dd.MM.yyyy HH:mm}"
-            };
-
-            output.AddRange(taskLines);
-            output.Add(new string('-', taskLines.Max(line => line.Length)));
+            ConsoleColor taskColor = task.GetTaskColor();
+            linesWithColors.Add(Tuple.Create($"ID: {task.Id}", taskColor));
+            linesWithColors.Add(Tuple.Create($"Название: {task.Title}", taskColor));
+            linesWithColors.Add(Tuple.Create($"Цель: {task.Description}", taskColor));
+            linesWithColors.Add(Tuple.Create($"Срок: {task.DueDate:dd.MM.yyyy HH:mm}", taskColor));
+            linesWithColors.Add(Tuple.Create(new string('-', 30), taskColor));
         }
-        //output = output
-        //    //.Skip(1)
-        //    .Select(line => line.PadRight(35)).ToList();
 
-        PrintMessage.PrintCenteredText(output.ToArray());
+        PrintMessage.PrintColoredCenteredBlock(linesWithColors);
+
         Console.ReadKey();
+        Console.Clear();
+    }
+
+    public void MarkTaskDone()
+    {
+        ShowTasks();
+
+        PrintMessage.PrintCenteredText("Введите ID задачи для отметки:");
+        string input = Console.ReadLine();
+
+        var taskId = CheckTaskId(input);
+        var task = TaskItems.FirstOrDefault(task => task.Id == taskId);
+
+        task.IsCompleted = true;
+
+        Console.Clear();
+        PrintMessage.PrintColoredCenteredLine($"Задача '{task.Title}' выполнена!", ConsoleColor.Green);
+        Console.ReadKey();
+        Console.Clear();
+    }
+
+    public void DeleteTask()
+    {
+        ShowTasks();
+
+        PrintMessage.PrintCenteredText("Введите ID задачи для удаления:");
+        string input = Console.ReadLine();
+        var taskId = CheckTaskId(input);
+        var task = TaskItems.FirstOrDefault(task => task.Id == taskId);
+        TaskItems.Remove(task);
+
+        Console.Clear();
+        PrintMessage.PrintColoredCenteredLine($"Задача '{task.Title}' удалена!", ConsoleColor.Yellow);
+        Console.ReadKey();
+        Console.Clear();
+    }
+
+    private int CheckTaskId(string input)
+    {
+        if (!int.TryParse(input, out int taskId))
+            PrintMessage.ShowError("Некорректный ID!");
+
+        var task = TaskItems.FirstOrDefault(task => task.Id == taskId);
+
+        if (task == null)
+            PrintMessage.ShowError("Задача с таким ID не найдена!");
+
+        return taskId;
     }
 
     private string GetInput(string prompt, string errorMessage)
