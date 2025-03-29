@@ -14,7 +14,8 @@ public class Program
         Console.SetBufferSize(100, 50);
 
         var fileService = new JsonFileService();
-        _taskManager = new TaskManager(fileService);
+        var inputProvider = new ConsoleInputProvider();
+        _taskManager = new TaskManager(fileService, inputProvider);
 
         PrintGreetings();
         while (_isRunning)
@@ -79,7 +80,7 @@ public class Program
     {
         PrintMessage.PrintCenteredText("Вы уверены, что хотите выйти? (Y/N)");
         if (Console.ReadKey().Key == ConsoleKey.Y)        
-            _taskManager.SaveTasks();           
+            _taskManager.PersistData();   
         
         Console.Clear();
         PrintMessage.PrintCenteredText(new[] { "Выход из приложения...", " ", "До свидания!" });        

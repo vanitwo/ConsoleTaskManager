@@ -31,6 +31,8 @@ namespace ConsoleTaskManager
             if (IsCompleted) return ConsoleColor.Green;
             if (DueDate < DateTime.Now) return ConsoleColor.Red;
             return ConsoleColor.Blue;
-        }                
+        }
+        
+        public static void ResetIdCounter() => _idCounter = 1;        
     }
 }

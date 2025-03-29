@@ -3,16 +3,19 @@
     public class TaskManager
     {
         private readonly JsonFileService _fileService;
+        private readonly ITaskInputProvider _inputProvider;
+
         public List<TaskItem> TaskItems { get; set; }
 
-        public TaskManager(JsonFileService fileService)
+        public TaskManager(JsonFileService fileService, ITaskInputProvider inputProvider)
         {
             _fileService = fileService;
+            _inputProvider = inputProvider;
             TaskItems = _fileService.LoadTasks();
             UpdateIdCounter();
         }
 
-        private void PersistData()
+        public void PersistData()
         {
             _fileService.SaveTasks(TaskItems);
             UpdateIdCounter();
@@ -28,17 +31,14 @@
 
         public void AddTask()
         {
-            string title = GetInput("Введите название задачи: ", "Описание задачи не может быть пустым!");
+            var title = _inputProvider.GetTitle();
             if (title == null) return;
-            Console.Clear();
 
-            string description = GetInput("Введите цель задачи: ", "Цель задачи не может быть пустой!");
+            var description = _inputProvider.GetDescription();
             if (description == null) return;
-            Console.Clear();
 
-            var dueDate = GetDueDate();
+            var dueDate = _inputProvider.GetDueDate();
             if (!dueDate.HasValue) return;
-            Console.Clear();
 
             TaskItems.Add(new TaskItem(title, description, dueDate.Value));
             PersistData();
