@@ -1,7 +1,6 @@
 # Console Task Manager 🚀
 
 [![.NET](https://github.com/vanitwo/ConsoleTaskManager/actions/workflows/dotnet.yml/badge.svg)](https://github.com/vanitwo/ConsoleTaskManager/actions/workflows/dotnet.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Простой консольный менеджер задач для управления вашими задачами и проектами прямо из терминала.
 
